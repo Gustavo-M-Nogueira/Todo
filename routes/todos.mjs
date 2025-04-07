@@ -1,18 +1,47 @@
 import { Router } from "express";
 import { Todo } from "../schemas/todo.mjs";
+import { validationResult, matchedData, checkSchema } from "express-validator";
+import { todoValidation, filterTodo } from '../schemas/validations/todoValidation.mjs'
 
 const router = Router();
 
-router.get('/api/todos', async (request, response) => {
-    const todos = await Todo.find(); 
+router.get('/api/todos', checkSchema(filterTodo), async (request, response) => {
+    const result = validationResult(request);
+
+    if (!result.isEmpty()) 
+        return response.status(400).send({ errors: result.array() });
+      
+    const { filter, value } = matchedData(request);
+
+    const todos = await Todo.find();
+
+    try {
+        if (filter && value) {
+            const query = {};
+            query[filter] = { $regex: value, $options: 'i' };
+            const filtered = await Todo.find(query);
+            return response.send(filtered);
+        }        
+    } catch (error) {
+        
+    }
+    if (filter && value)
+        return response.send(
+            users.filter((user) => user[filter].includes(value))
+        );
 
     response.send(todos);
 });
 
-router.post('/api/todos', async (request, response) => {
-    const { body } = request;
+router.post('/api/todos', checkSchema(todoValidation), async (request, response) => {
+    const result = validationResult(request);
 
-    const newTodo = new Todo(body);
+    if(!result.isEmpty())
+        return response.status(400).send({ errors: result.array() });
+
+    const data = matchedData(request);
+
+    const newTodo = new Todo(data);
 
     try {
         const savedTodo = await newTodo.save();
@@ -24,21 +53,50 @@ router.post('/api/todos', async (request, response) => {
 });
 
 router.get('/api/todos/:id', async (request, response) => {
-    const todo = await Todo.findById(request.params.id); 
+    try {
+        const todo = await Todo.findById(request.params.id); 
 
-    response.send(todo);
+        if (!todo) return response.status(404).send({ message: 'To do not found' });
+
+        response.send(todo);
+    } catch (error) {
+        console.error(error);
+        response.status(500).send({ message: 'Failed to find to do' });
+    }
 });
 
-router.put('/api/todos/:id', async (request, response) => {
-    const updatedTodo = await Todo.findByIdAndUpdate(request.params.id, request.body, { new: true, runValidators: true });
+router.put('/api/todos/:id', checkSchema(todoValidation), async (request, response) => {
+    const result = validationResult(request);
 
-    response.send(updatedTodo);
+    if(!result.isEmpty())
+        return response.status(400).send({ errors: result.array() });
+
+    const data = matchedData(request);
+
+    try {
+        const updatedTodo = await Todo.findByIdAndUpdate(request.params.id, data, { new: true, runValidators: true });
+
+        if (!updatedTodo) return response.status(404).send({ message: 'To do not found' });
+
+        response.send(updatedTodo);
+    } catch (error) {
+        console.error(error);
+        response.status(500).send({ message: 'Failed to update to do' });
+    }
+
 });
 
 router.delete('/api/todos/:id', async (request, response) => {
-    const deletedTodo = await Todo.findByIdAndDelete(request.params.id);
+    try {
+        const deletedTodo = await Todo.findByIdAndDelete(request.params.id);
 
-    response.send(deletedTodo);
+        if (!deletedTodo) return response.status(404).send({ message: 'To do not found' });
+
+        response.send(deletedTodo);
+    } catch (error) {
+        console.error(error);
+        response.status(500).send({ message: 'Failed to delete to do' });
+    }
 });
 
 export default router;

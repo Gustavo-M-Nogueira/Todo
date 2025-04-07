@@ -1,9 +1,12 @@
 import mongoose from "mongoose";
 
 const TodoSchema = new mongoose.Schema({
-    task: {
+    title: {
         type: mongoose.Schema.Types.String,
         required: true,
+    },
+    description: {
+        type: mongoose.Schema.Types.String,
     },
     status: {
         type: mongoose.Schema.Types.String,
