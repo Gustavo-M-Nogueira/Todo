@@ -25,10 +25,6 @@ router.get('/api/todos', checkSchema(filterTodo), async (request, response) => {
     } catch (error) {
         
     }
-    if (filter && value)
-        return response.send(
-            users.filter((user) => user[filter].includes(value))
-        );
 
     response.send(todos);
 });
