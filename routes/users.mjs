@@ -2,10 +2,18 @@ import { Router } from "express";
 import { User } from "../schemas/user.mjs";
 import { validationResult, matchedData, checkSchema } from "express-validator";
 import { userValidation, filterUser } from '../schemas/validations/userValidation.mjs'
+import { isAuthenticated } from "../auth/cookies.mjs";
+import { hashPassword  } from "../auth/passwordHash.mjs";
 
 const router = Router();
 
 router.get('/api/users', checkSchema(filterUser), async (request, response) => {
+    // try {
+    //     isAuthenticated(request.session);
+    //   } catch (err) {
+    //     return response.status(401).send("Not authenticated");
+    //   }
+      
     const result = validationResult(request);
 
     if (!result.isEmpty()) 
@@ -23,14 +31,11 @@ router.get('/api/users', checkSchema(filterUser), async (request, response) => {
             return response.send(filtered);
         }        
     } catch (error) {
-        
+        console.error("Error fetching users:", error);
+        return response.status(500).send({ error: "Internal Server Error" });
     }
-    if (filter && value)
-        return response.send(
-            users.filter((user) => user[filter].includes(value))
-        );
 
-    response.send(users);
+    response.status(200).send(users);
 });
 
 router.post('/api/users', checkSchema(userValidation), async (request, response) => {
@@ -40,6 +45,8 @@ router.post('/api/users', checkSchema(userValidation), async (request, response)
         return response.status(400).send({ errors: result.array() });
 
     const data = matchedData(request);
+
+    data.password = hashPassword(data.password);
 
     const newUser = new User(data);
 

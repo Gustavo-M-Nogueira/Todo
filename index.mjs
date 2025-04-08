@@ -1,12 +1,15 @@
 import express from 'express';
-import mongoose from 'mongoose';
 import routes  from './routes/index.mjs'
+import applyCookieSession from './auth/cookies.mjs';
+import dbConnection from './db/dbConnection.mjs';
+import { applyPassport } from './auth/passport.mjs';
 
 const app = express();
 
-mongoose.connect('mongodb://localhost:27017/todo')
-    .then(() => console.log('Connected to Database'))
-    .catch((err) => console.log(`Error: ${err}`));
+dbConnection();
+
+applyCookieSession(app);
+applyPassport(app);
 
 app.use(express.json());
 app.use(routes);
